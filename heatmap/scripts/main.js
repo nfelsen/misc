@@ -18,28 +18,72 @@ define(['scripts/d3.v3', 'scripts/elasticsearch'], function(d3, elasticsearch) {
   var hccol = [6, 5, 41, 12, 42, 21, 58, 56, 14, 16, 43, 15, 17, 46, 47, 48, 54, 49, 37, 38, 25, 22, 7, 8, 2, 45, 9, 20, 24, 44, 23, 19, 13, 40, 11, 1, 39, 53, 10, 52, 3, 26, 27, 60, 50, 51, 59, 18, 31, 32, 30, 4, 55, 28, 29, 57, 36, 34, 33, 35] // change to gene name or probe id
   var rowLabel = ['Nat2', '1759302_s_at', '1759502_s_at', '1759540_s_at', '1759781_s_at', '1759828_s_at', '1759829_s_at', '1759906_s_at', '1760088_s_at', '1760164_s_at', '1760453_s_at', '1760516_s_at', '1760594_s_at', '1760894_s_at', '1760951_s_at', '1761030_s_at', '1761128_at', '1761145_s_at', '1761160_s_at', '1761189_s_at', '1761222_s_at', '1761245_s_at', '1761277_s_at', '1761434_s_at', '1761553_s_at', '1761620_s_at', '1761873_s_at', '1761884_s_at', '1761944_s_at', '1762105_s_at', '1762118_s_at', '1762151_s_at', '1762388_s_at', '1762401_s_at', '1762633_s_at', '1762701_s_at', '1762787_s_at', '1762819_s_at', '1762880_s_at', '1762945_s_at', '1762983_s_at', '1763132_s_at', '1763138_s_at', '1763146_s_at', '1763198_s_at', '1763383_at', '1763410_s_at', '1763426_s_at', '1763490_s_at', '1763491_s_at'] // change to gene name or probe id
   var colLabel = ['con1027', 'con1028', 'con1029', 'con103', 'con1030', 'con1031', 'con1032', 'con1033', 'con1034', 'con1035', 'con1036', 'con1037', 'con1038', 'con1039', 'con1040', 'con1041', 'con108', 'con109', 'con110', 'con111', 'con112', 'con125', 'con126', 'con127', 'con128', 'con129', 'con130', 'con131', 'con132', 'con133', 'con134', 'con135', 'con136', 'con137', 'con138', 'con139', 'con14', 'con15', 'con150', 'con151', 'con152', 'con153', 'con16', 'con17', 'con174', 'con184', 'con185', 'con186', 'con187', 'con188', 'con189', 'con191', 'con192', 'con193', 'con194', 'con199', 'con2', 'con200', 'con201', 'con21'] // change to contrast name
-  var client = new elasticsearch.Client();
-  // console.log(client);
-
+  var client = new elasticsearch.Client({
+    hosts: [
+      'localhost:9200'
+    ],
+    sniffOnStart: true,
+    log: {
+      level: 'trace'
+    }
+  });
+  var index_prefix = 'logstash-medium-db-'
+  console.log("aki")
+  var today = new Date();
+  var yesterday = today.setDate(today.getDate() - 1);
+  // var year = today.getUTCFullYear();
+  // var month = today.getUTCMonth()
+  // var day = today.getUTCDate();
+  var indexes = index_prefix + today.getUTCFullYear() + '.' +  ("0" + (today.getUTCMonth() + 1)).slice(-2)  + '.' + today.getUTCDate();
+  indexes = 'logstash-medium-db-2015.02.14'
   client.search({
-    index: 'heatmap3',
-    size: 30001,
+    index: indexes,
+    scroll: '60s',
     body: {
-      // Begin query.
-      query: {
-        // Boolean query for matching and excluding items.
-        bool: {
-          must_not: {
-            match: {
-              "value": "log2ratio"
+      "facets": {
+        "terms": {
+          "terms": {
+            "field": "hashKey",
+            "order": "count",
+            "size": 3000,
+            "exclude": []
+          },
+          "facet_filter": {
+            "fquery": {
+              "query": {
+                "filtered": {
+                  "filter": {
+                    "bool": {
+                      "must": [{
+                        "range": {
+                          "@timestamp": {
+                            "from": 1423899153820,
+                            "to": 1423985553820
+                          }
+                        }
+                      }, {
+                        "terms": {
+                          "table": [
+                            "postdelta"
+                          ]
+                        }
+                      }]
+                    }
+                  }
+                }
+              }
             }
           }
         }
       }
     }
   }).then(function(resp) {
-    hits = resp.hits.hits
+    // console.log(resp)
+    // hits = resp.hits.hits
+    hits = resp.facets.terms.terms
+    console.log(hits)
     data = hits.map(function(v) {
+      console.log(v)
       return { 'col' : +v._source.col, 'row' : +v._source.row, 'value': +v._source.value }
     }).sort(function(a, b) {
       if (a.row == b.row) {
