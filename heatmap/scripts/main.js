@@ -8,16 +8,14 @@ define(['scripts/d3.v3', 'scripts/elasticsearch'], function(d3, elasticsearch) {
   }
   var cellSize = 10;
   var col_number = 60;
-  var row_number = 50;
-  var width = cellSize * col_number
-  var height = cellSize * row_number // - margin.top - margin.bottom,
-  var legendElementWidth = cellSize * 2.5
+  var legendElementWidth = cellSize * 3
   var colorBuckets = 21
-  var colors = ['#005824', '#1A693B', '#347B53', '#4F8D6B', '#699F83', '#83B09B', '#9EC2B3', '#B8D4CB', '#D2E6E3', '#EDF8FB', '#FFFFFF', '#F1EEF6', '#E6D3E1', '#DBB9CD', '#D19EB9', '#C684A4', '#BB6990', '#B14F7C', '#A63467', '#9B1A53', '#91003F']
+  var colors = ["#fff5f0", "#fee0d2", "#fcbba1", "#fc9272", "#fb6a4a", "#ef3b2c", "#cb181d", "#a50f15", "#67000d"]
   var hcrow = [49, 11, 30, 4, 18, 6, 12, 20, 19, 33, 32, 26, 44, 35, 38, 3, 23, 41, 22, 10, 2, 15, 16, 36, 8, 25, 29, 7, 27, 34, 48, 31, 45, 43, 14, 9, 39, 1, 37, 47, 42, 21, 40, 5, 28, 46, 50, 17, 24, 13] // change to gene name or probe id
   var hccol = [6, 5, 41, 12, 42, 21, 58, 56, 14, 16, 43, 15, 17, 46, 47, 48, 54, 49, 37, 38, 25, 22, 7, 8, 2, 45, 9, 20, 24, 44, 23, 19, 13, 40, 11, 1, 39, 53, 10, 52, 3, 26, 27, 60, 50, 51, 59, 18, 31, 32, 30, 4, 55, 28, 29, 57, 36, 34, 33, 35] // change to gene name or probe id
-  var rowLabel = ['Nat2', '1759302_s_at', '1759502_s_at', '1759540_s_at', '1759781_s_at', '1759828_s_at', '1759829_s_at', '1759906_s_at', '1760088_s_at', '1760164_s_at', '1760453_s_at', '1760516_s_at', '1760594_s_at', '1760894_s_at', '1760951_s_at', '1761030_s_at', '1761128_at', '1761145_s_at', '1761160_s_at', '1761189_s_at', '1761222_s_at', '1761245_s_at', '1761277_s_at', '1761434_s_at', '1761553_s_at', '1761620_s_at', '1761873_s_at', '1761884_s_at', '1761944_s_at', '1762105_s_at', '1762118_s_at', '1762151_s_at', '1762388_s_at', '1762401_s_at', '1762633_s_at', '1762701_s_at', '1762787_s_at', '1762819_s_at', '1762880_s_at', '1762945_s_at', '1762983_s_at', '1763132_s_at', '1763138_s_at', '1763146_s_at', '1763198_s_at', '1763383_at', '1763410_s_at', '1763426_s_at', '1763490_s_at', '1763491_s_at'] // change to gene name or probe id
-  var colLabel = ['con1027', 'con1028', 'con1029', 'con103', 'con1030', 'con1031', 'con1032', 'con1033', 'con1034', 'con1035', 'con1036', 'con1037', 'con1038', 'con1039', 'con1040', 'con1041', 'con108', 'con109', 'con110', 'con111', 'con112', 'con125', 'con126', 'con127', 'con128', 'con129', 'con130', 'con131', 'con132', 'con133', 'con134', 'con135', 'con136', 'con137', 'con138', 'con139', 'con14', 'con15', 'con150', 'con151', 'con152', 'con153', 'con16', 'con17', 'con174', 'con184', 'con185', 'con186', 'con187', 'con188', 'con189', 'con191', 'con192', 'con193', 'con194', 'con199', 'con2', 'con200', 'con201', 'con21'] // change to contrast name
+  // var colLabel  = ['con1027', 'con1028', 'con1029', 'con103', 'con1030', 'con1031', 'con1032', 'con1033', 'con1034', 'con1035', 'con1036', 'con1037', 'con1038', 'con1039', 'con1040', 'con1041', 'con108', 'con109', 'con110', 'con111', 'con112', 'con125', 'con126', 'con127', 'con128', 'con129', 'con130', 'con131', 'con132', 'con133', 'con134', 'con135', 'con136', 'con137', 'con138', 'con139', 'con14', 'con15', 'con150', 'con151', 'con152', 'con153', 'con16', 'con17', 'con174', 'con184', 'con185', 'con186', 'con187', 'con188', 'con189', 'con191', 'con192', 'con193', 'con194', 'con199', 'con2', 'con200', 'con201', 'con21'] // change to contrast name
+  // var rowLabel = Array.apply(null, {length: N}).map(Number.call, Number)
+  var colLabel = Array.apply(null, {length: col_number}).map(Number.call, Number)
   var client = new elasticsearch.Client({
     hosts: [
       'localhost:9200'
@@ -80,11 +78,10 @@ define(['scripts/d3.v3', 'scripts/elasticsearch'], function(d3, elasticsearch) {
   }).then(function(resp) {
     // console.log(resp)
     // hits = resp.hits.hits
-    hits = resp.facets.terms.terms
-    console.log(hits)
-    data = hits.map(function(v) {
-      console.log(v)
-      return { 'col' : +v._source.col, 'row' : +v._source.row, 'value': +v._source.value }
+    terms = resp.facets.terms.terms
+    i = 1
+    data = terms.map(function(v) { 
+      return { 'col' : +i++ % col_number, 'row' : +1 + (Math.floor(i/col_number)), 'value': +v.count, 'hashKey': v.term }
     }).sort(function(a, b) {
       if (a.row == b.row) {
         return parseFloat(+a.col) - parseFloat(+b.col)
@@ -92,8 +89,20 @@ define(['scripts/d3.v3', 'scripts/elasticsearch'], function(d3, elasticsearch) {
         return parseFloat(+a.row) - parseFloat(+b.row)
       }
     });
+    // console.log(data)
+    min = data[data.length - 1].value
+    max = data[0].value
+    // var rowLabel = ['Nat2', '1759302_s_at', '1759502_s_at', '1759540_s_at', '1759781_s_at', '1759828_s_at', '1759829_s_at', '1759906_s_at', '1760088_s_at', '1760164_s_at', '1760453_s_at', '1760516_s_at', '1760594_s_at', '1760894_s_at', '1760951_s_at', '1761030_s_at', '1761128_at', '1761145_s_at', '1761160_s_at', '1761189_s_at', '1761222_s_at', '1761245_s_at', '1761277_s_at', '1761434_s_at', '1761553_s_at', '1761620_s_at', '1761873_s_at', '1761884_s_at', '1761944_s_at', '1762105_s_at', '1762118_s_at', '1762151_s_at', '1762388_s_at', '1762401_s_at', '1762633_s_at', '1762701_s_at', '1762787_s_at', '1762819_s_at', '1762880_s_at', '1762945_s_at', '1762983_s_at', '1763132_s_at', '1763138_s_at', '1763146_s_at', '1763198_s_at', '1763383_at', '1763410_s_at', '1763426_s_at', '1763490_s_at', '1763491_s_at'] // change to gene name or probe id
+    var row_number = Math.floor(data.length / col_number)
+    var width = cellSize * col_number
+    var height = cellSize * row_number
+    var rowLabel = new Array(row_number)
+    for(var i = 0; i < row_number; i++){
+      rowLabel[i] = (i * col_number).toString()
+    }
+    console.log(rowLabel)
     var colorScale = d3.scale.quantile()
-      .domain([-10, 0, 10])
+      .domain([min, max])
       .range(colors);
     var svg = d3.select("#chart").append("svg")
       .attr("width", width + margin.left + margin.right)
@@ -204,7 +213,7 @@ define(['scripts/d3.v3', 'scripts/elasticsearch'], function(d3, elasticsearch) {
           .style("left", (d3.event.pageX + 10) + "px")
           .style("top", (d3.event.pageY - 10) + "px")
           .select("#value")
-          .text("lables:" + rowLabel[d.row - 1] + "," + colLabel[d.col - 1] + "\ndata:" + d.value + "\nrow-col-idx:" + d.col + "," + d.row + "\ncell-xy " + this.x.baseVal.value + ", " + this.y.baseVal.value);
+          .text("hashKey: " + d.hashKey + "\nHits: " + d.value);
         //Show the tooltip
         d3.select("#tooltip").classed("hidden", false);
       })
@@ -214,9 +223,11 @@ define(['scripts/d3.v3', 'scripts/elasticsearch'], function(d3, elasticsearch) {
         d3.selectAll(".colLabel").classed("text-highlight", false);
         d3.select("#tooltip").classed("hidden", true);
       });
-
+    var o = d3.scale.ordinal()
+        .domain(colors)
+        .rangeRoundBands([min, max]);
     var legend = svg.selectAll(".legend")
-      .data([-10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+      .data(o.range())
       .enter().append("g")
       .attr("class", "legend");
 
